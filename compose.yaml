@@ -1,0 +1,81 @@
+
+
+services:
+  nats:
+    container_name: nats
+    image: nats-streaming:0.25-alpine
+    ports:
+      - 4444:4444
+    networks:
+      - servord
+    volumes:
+      - "nats:/data"
+    command:
+      - "--port"
+      - "4444"
+      - "--cluster_id"
+      - nats-streaming
+
+  memcached:
+    container_name: memcached
+    image: sameersbn/memcached:1.5.6-2
+    ports:
+      - 11211:11211
+    networks:
+      - servord
+    restart: always
+
+  subscriber:
+    container_name: subscriber
+    build:
+      context: .
+      dockerfile: subscriber.Dockerfile
+    links:
+      - postgres
+      - memcached
+      - nats
+    env_file:
+      - subscriber.env
+    ports:
+      - 8070:8060
+    networks:
+      - servord
+
+  server:
+    container_name: server
+    build:
+      context: .
+      dockerfile: server.Dockerfile
+    links:
+      - postgres
+      - memcached
+    env_file:
+      - server.env
+    ports:
+      - 8090:8080
+    networks:
+      - servord
+
+  postgres:
+    container_name: postgres
+    build:
+      context: build/postgres
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+        POSTGRES_USER: postgres
+        POSTGRES_PASSWORD: postgres
+    volumes:
+      - "postgres:/var/lib/postgresql/data"
+    ports:
+      - 5555:5432
+    networks:
+      - servord
+
+networks:
+  servord:
+    name: servord
+
+volumes:
+  postgres:
+  nats:
