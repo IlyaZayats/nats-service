@@ -3,11 +3,11 @@ package handlers
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"github.com/IlyaZayats/servord/internal/interfaces"
 	"github.com/IlyaZayats/servord/internal/services"
 	"github.com/gin-gonic/gin"
 	"github.com/nats-io/stan.go"
+	"github.com/sirupsen/logrus"
 	"net/http"
 )
 
@@ -32,7 +32,6 @@ func (n *NatsHandler) Run() error {
 		return err
 	}
 	for i := range cacheList {
-		//logrus.Println(string(cacheList[i]))
 		err := n.mc.Set(keys[i], cacheList[i])
 		if err != nil {
 			return err
@@ -43,23 +42,24 @@ func (n *NatsHandler) Run() error {
 		sub, err = (*n.ns).Subscribe("orders", func(m *stan.Msg) {
 			buff := new(bytes.Buffer)
 			if err := json.Compact(buff, m.Data); err != nil {
-				fmt.Println(err)
+				logrus.Error(err.Error())
+				return
 			}
 			key, err := n.s.InsertOrder(buff.Bytes())
 			if err != nil {
-				fmt.Println(err.Error())
-			} else {
-				err := n.mc.Set(key, m.Data)
-				if err != nil {
-					doneC <- err
-					return
-				}
+				logrus.Error(err.Error())
+				return
 			}
-
+			err = n.mc.Set(key, m.Data)
+			if err != nil {
+				doneC <- err
+				return
+			}
 		})
 		for {
 			if err != nil {
 				doneC <- err
+				break
 			}
 		}
 		sub.Unsubscribe()
@@ -88,23 +88,22 @@ func (h *OrderHandler) InitRoute() {
 func (h *OrderHandler) GetOrder(c *gin.Context) {
 	var request GetOrderRequest
 	if err := c.BindUri(&request); err != nil {
+		logrus.Error(err.Error())
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 	order, err := h.cache.Get(request.OrderUid)
 	if err != nil {
+		logrus.Error(err.Error())
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 	var output map[string]interface{}
 	err = json.Unmarshal(order, &output)
 	if err != nil {
+		logrus.Error(err.Error())
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	//logrus.Println(dude)
-	//var output OrderOutput
-	//err = json.Unmarshal([]byte(dude), &output)
-	//logrus.Println(output.data)
 	c.JSON(http.StatusOK, output)
 }

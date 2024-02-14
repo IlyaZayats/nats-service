@@ -42,7 +42,7 @@ func main() {
 
 	_, err = handlers.NewOrderHandler(g, mc)
 	if err != nil {
-		logrus.Panicf("unable build slug handlers: %v", err)
+		logrus.Panicf("unable build order handlers: %v", err)
 	}
 
 	doneC := make(chan error)
