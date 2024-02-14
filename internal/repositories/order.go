@@ -45,19 +45,11 @@ func (r *PostgresOrderRepository) GetOrders() ([]entities.Order, error) {
 	defer rows.Close()
 	for rows.Next() {
 		var order entities.Order
-		//var test string
 		if err := rows.Scan(&order); err != nil {
 			return nil, err
 		}
-		//if err := rows.Scan(&test); err != nil {
-		//	return nil, err
-		//}
-		//logrus.Println(test)
 		orders = append(orders, order)
 	}
-	//for _, order := range orders {
-	//	logrus.Println(order)
-	//}
 	return orders, nil
 }
 
