@@ -17,8 +17,7 @@ func NewPostgresPool(dbUrl string) (*pgxpool.Pool, error) {
 	}
 
 	err = retry.Do(func() error {
-		var err error
-		err = pool.Ping(context.Background())
+		err := pool.Ping(context.Background())
 		return err
 	},
 		retry.Attempts(10),

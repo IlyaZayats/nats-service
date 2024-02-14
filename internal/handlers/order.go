@@ -3,6 +3,7 @@ package handlers
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"github.com/IlyaZayats/servord/internal/interfaces"
 	"github.com/IlyaZayats/servord/internal/services"
 	"github.com/gin-gonic/gin"
@@ -17,10 +18,6 @@ type NatsHandler struct {
 	ns *stan.Conn
 }
 
-type OrderOutput struct {
-	data string
-}
-
 func NewNatsHandler(s *services.OrderService, mc interfaces.Cache, ns *stan.Conn) (*NatsHandler, error) {
 	return &NatsHandler{s: s, mc: mc, ns: ns}, nil
 }
@@ -32,7 +29,6 @@ func (n *NatsHandler) Run() error {
 		return err
 	}
 	for i := range cacheList {
-		//logrus.Println(string(cacheList[i]))
 		err := n.mc.Set(keys[i], cacheList[i])
 		if err != nil {
 			return err
@@ -41,6 +37,7 @@ func (n *NatsHandler) Run() error {
 	var sub stan.Subscription
 	go func() {
 		sub, err = (*n.ns).Subscribe("orders", func(m *stan.Msg) {
+			logrus.Println("Got new nats-streaming msg!")
 			buff := new(bytes.Buffer)
 			if err := json.Compact(buff, m.Data); err != nil {
 				logrus.Error(err.Error())
@@ -57,10 +54,12 @@ func (n *NatsHandler) Run() error {
 		})
 		for {
 			if err != nil {
+				if errSub := sub.Unsubscribe(); errSub != nil {
+					logrus.Error(err.Error())
+				}
 				doneC <- err
 			}
 		}
-		sub.Unsubscribe()
 	}()
 	return <-doneC
 }
@@ -90,6 +89,7 @@ func (h *OrderHandler) GetOrder(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+	logrus.Println(fmt.Sprintf("Got new order request! ID: %s", request.OrderUid))
 	order, err := h.cache.Get(request.OrderUid)
 	if err != nil {
 		logrus.Error(err.Error())

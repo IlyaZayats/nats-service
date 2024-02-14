@@ -7,7 +7,6 @@ import (
 	"github.com/IlyaZayats/servord/internal/interfaces"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 )
 
 type PostgresOrderRepository struct {
@@ -54,7 +53,6 @@ func (r *PostgresOrderRepository) GetOrders() ([]entities.Order, error) {
 }
 
 func (r *PostgresOrderRepository) InsertOrder(order entities.Order) error {
-	logrus.Println(order)
 	q := `insert into WBOrder (order_uid, track_number, entry, locale, internal_signature, customer_id, delivery_service, shard_key, sm_id, date_created, oof_shard) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`
 	if _, err := r.db.Exec(context.Background(), q, order.OrderUid, order.TrackNumber, order.Entry, order.Locale, order.InternalSignature, order.CustomerId, order.DeliveryService, order.ShardKey, order.SmId, order.DateCreated, order.OofShard); err != nil {
 		return errors.Wrap(err, "insert order")

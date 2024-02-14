@@ -29,8 +29,7 @@ func (mc *MemcachedCache) Set(key string, value []byte) error {
 func NewMemcachedCache(url string) (interfaces.Cache, error) {
 	mc := memcache.New(url)
 	err := retry.Do(func() error {
-		var err error
-		err = mc.Set(&memcache.Item{Key: "connection", Value: []byte("test")})
+		err := mc.Set(&memcache.Item{Key: "connection", Value: []byte("test")})
 		return err
 	},
 		retry.Attempts(10),
